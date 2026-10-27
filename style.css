@@ -1,0 +1,15 @@
+.btn-main, .btn-ghost {
+  display: block; width: 100%; text-align: center; cursor: pointer;
+  padding: 1rem 1.25rem; border-radius: 9999px; font-weight: 800; font-size: 1.05rem;
+  transition: transform .15s ease;
+}
+.btn-main { background: #ff5a4e; color: #fff; box-shadow: 0 6px 0 #b8362c; }
+.btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8362c; }
+.btn-ghost { border: 2px solid rgba(245,241,230,.4); color: #f5f1e6; }
+.btn-main:focus-visible, .btn-ghost:focus-visible, input:focus-visible { outline: 3px solid #f5f1e6; outline-offset: 3px; }
+
+.spinner { width: 48px; height: 48px; border-radius: 50%; border: 5px solid rgba(245,241,230,.25); border-top-color: #ff5a4e; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.thumb { aspect-ratio: 4/5; object-fit: cover; width: 100%; border-radius: 6px; background: #0e2236; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } .btn-main { transition: none; } }

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Capsule photo – Soirée badminton</title>
+  <meta name="theme-color" content="#16324f">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=Pacifico&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: { court: '#16324f', line: '#f5f1e6', shuttle: '#ff5a4e' },
+      fontFamily: { ui: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'] }
+    } } };
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-court text-line font-ui min-h-screen">
+  <main class="max-w-md mx-auto px-5 pt-8 pb-12">
+
+    <!-- En-tête (5 taps sur le logo = accès admin) -->
+    <header class="text-center mb-8">
+      <img id="logoHeader" src="logo.png" alt="Logo du club" class="h-20 w-20 object-contain mx-auto mb-3 select-none" onerror="this.style.display='none'">
+      <h1 id="themeTitle" class="font-extrabold text-3xl leading-tight"></h1>
+      <p id="subtitle" class="mt-2 text-line/70"></p>
+    </header>
+
+    <!-- VUE CAPTURE -->
+    <section id="viewCapture">
+      <label class="block">
+        <input id="fileInput" type="file" accept="image/*" capture="environment" class="hidden">
+        <span class="btn-main">📸 Prendre une photo</span>
+      </label>
+      <label class="block mt-3">
+        <input id="fileInputGallery" type="file" accept="image/*" class="hidden">
+        <span class="btn-ghost">Importer depuis ma galerie</span>
+      </label>
+      <p class="text-center text-sm text-line/60 mt-5">Tu ne verras pas ta photo maintenant : toutes les photos seront dévoilées demain.</p>
+      <p id="sentCount" class="text-center text-sm mt-2 text-shuttle font-semibold"></p>
+    </section>
+
+    <!-- VUE DÉVELOPPEMENT / CONFIRMATION -->
+    <section id="viewSending" class="hidden text-center py-10">
+      <div class="spinner mx-auto mb-4"></div>
+      <p class="font-semibold">Développement en cours…</p>
+    </section>
+
+    <section id="viewDone" class="hidden text-center py-6">
+      <div class="text-6xl mb-3">🔒</div>
+      <h2 class="text-2xl font-extrabold mb-2">Photo enregistrée !</h2>
+      <p class="text-line/80 mb-6">Elle est scellée dans la capsule. Rendez-vous <strong>demain</strong> pour découvrir toutes les photos de la soirée.</p>
+      <button id="btnAgain" class="btn-main">Prendre une autre photo</button>
+    </section>
+
+    <!-- VUE GALERIE -->
+    <section id="viewGallery" class="hidden">
+      <p class="text-center text-line/80 mb-5">La capsule est ouverte ! Touche une photo pour l'agrandir et la télécharger.</p>
+      <div id="grid" class="grid grid-cols-2 gap-3"></div>
+      <p id="galleryEmpty" class="hidden text-center text-line/60 mt-6">Aucune photo pour le moment.</p>
+    </section>
+
+    <p id="errorMsg" class="hidden mt-6 text-center text-sm bg-shuttle/20 border border-shuttle rounded-lg p-3"></p>
+
+    <!-- Zone admin cachée -->
+    <section id="adminPanel" class="hidden mt-10 border-t border-line/20 pt-6">
+      <h3 class="font-bold mb-3">Mode admin</h3>
+      <div id="adminLogin">
+        <input id="adminPwd" type="password" placeholder="Mot de passe" class="w-full rounded-lg px-4 py-3 bg-line text-court mb-3">
+        <button id="adminBtn" class="btn-ghost">Entrer</button>
+      </div>
+      <div id="adminActions" class="hidden space-y-3">
+        <button id="btnUnlock" class="btn-main">🔓 Débloquer la galerie pour tout le monde</button>
+        <button id="btnPreview" class="btn-ghost">👀 Voir la galerie (sur mon téléphone uniquement)</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
+    <img id="lightboxImg" class="max-h-[78vh] max-w-full rounded shadow-2xl" alt="">
+    <div class="flex gap-3 mt-4">
+      <a id="lightboxDl" class="btn-main !w-auto px-6" download>⬇ Télécharger</a>
+      <button id="lightboxClose" class="btn-ghost !w-auto px-6">Fermer</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
