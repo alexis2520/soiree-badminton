@@ -86,10 +86,11 @@ async function route() {
   gallery ? openGallery() : showCapture();
 }
 function showCapture() {
-  inGallery = false;
+  inGallery = false; document.body.dataset.view = "capture";
   $("viewCapture").classList.remove("hidden"); $("viewGallery").classList.add("hidden");
   updateAdminBar();
   if (!token()) toast("Scanne le QR code de la soirée pour participer.", true);
+  autoStart();
 }
 function setMode(m) { mode = m; sessionStorage.setItem("capsule_mode", m); m === "gallery" ? openGallery() : showCapture(); }
 
@@ -98,27 +99,64 @@ let stream, facing = "environment", hasTorch = false, flash = false, busy = fals
 const video = $("video");
 const landscapeNow = () => matchMedia("(orientation: landscape)").matches;
 
+const HINT_OFF = `<span class="tap-ico">👆</span><span>Touche ici pour ouvrir<br>l'appareil photo</span>`;
+let starting = false, autoTried = false;
+function syncUi() {
+  $("btnShot").classList.toggle("idle", !stream);
+  $("camHint").innerHTML = stream ? "Appuie sur le <b>bouton vert</b> pour prendre la photo.<br><small>Elle est scellée aussitôt : découverte demain !</small>"
+    : "Touche d'abord l'écran pour <b>ouvrir l'appareil photo</b>.";
+}
+function setOverlay(html) { $("camStart").innerHTML = html; $("camStart").classList.remove("hidden"); }
+async function openStream() {
+  const tries = [
+    { video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false },
+    { video: { facingMode: { ideal: facing } }, audio: false },
+    { video: true, audio: false }];
+  let err;
+  for (let i = 0; i < 4; i++) {                       // réessaie : la caméra met parfois du temps à se libérer
+    try { return await navigator.mediaDevices.getUserMedia(tries[Math.min(i, 2)]); }
+    catch (e) { err = e; if (e.name === "NotAllowedError" || e.name === "SecurityError") break; await sleep(450); }
+  }
+  throw err;
+}
 async function startCamera() {
-  stopCamera();
+  if (starting) return; starting = true;
+  setOverlay(`<span class="tap-ico">⏳</span><span>Ouverture de la caméra…</span>`);
+  stopCamera(true); await sleep(350);                 // laisse le temps de libérer l'ancienne caméra
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false });
-    video.srcObject = stream; await video.play();
+    if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error(), { name: "NoApi" });
+    const s = stream = await openStream();
+    video.srcObject = s; await video.play();
     $("camStart").classList.add("hidden");
     video.style.transform = facing === "user" ? "scaleX(-1)" : "";
-    const caps = stream.getVideoTracks()[0].getCapabilities?.() || {};
-    hasTorch = !!caps.torch;
+    const track = s.getVideoTracks()[0];
+    track.onended = () => { if (stream === s) stopCamera(); };
+    hasTorch = !!track.getCapabilities?.().torch;
     $("btnFlash").classList.toggle("hidden", !(hasTorch || facing === "user"));
-  } catch {
-    $("camStart").textContent = "Caméra indisponible : utilise « Importer »";
-    $("camStart").classList.remove("hidden");
-  }
+  } catch (e) {
+    console.error(e); stream = null;
+    setOverlay(`<span class="tap-ico">⚠️</span><span>${e.name === "NotAllowedError" ? "Autorise la caméra dans ton navigateur,<br>puis touche ici" : e.name === "NoApi" ? "Caméra indisponible ici.<br>Utilise « Importer »" : "Caméra occupée ou indisponible.<br>Touche ici pour réessayer"}</span>`);
+  } finally { starting = false; syncUi(); }
 }
-function stopCamera() {
+function stopCamera(silent) {
   stream?.getTracks().forEach(t => t.stop()); stream = null; video.srcObject = null;
-  $("camStart").classList.remove("hidden"); $("camStart").textContent = "📸 Ouvrir l'appareil photo";
+  if (!silent) { setOverlay(HINT_OFF); syncUi(); }
 }
+function autoStart() {                                // si la permission est déjà accordée, on ouvre directement
+  if (autoTried || stream) return; autoTried = true;
+  navigator.permissions?.query({ name: "camera" }).then(p => { if (p.state === "granted") startCamera(); }).catch(() => {});
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && !inGallery && stream && stream.getVideoTracks()[0].readyState === "ended") startCamera();
+});
 $("camStart").onclick = startCamera;
-$("btnFlip").onclick = () => { facing = facing === "user" ? "environment" : "user"; stream ? startCamera() : startCamera(); };
+$("btnFlip").onclick = async () => {
+  if (starting) return;
+  const prev = facing; facing = facing === "user" ? "environment" : "user";
+  await startCamera();
+  if (!stream) { facing = prev; await startCamera(); }  // si l'autre caméra échoue, on revient à la précédente
+};
+setOverlay(HINT_OFF); syncUi();
 $("btnFlash").onclick = () => { flash = !flash; $("btnFlash").classList.toggle("on", flash); $("flashLbl").textContent = flash ? "Flash on" : "Flash off"; };
 
 $("btnShot").onclick = async () => {
@@ -254,7 +292,7 @@ async function fetchBlobUrl(path) {
   return (blobCache[path] = URL.createObjectURL(await r.blob()));
 }
 async function openGallery() {
-  stopCamera(); inGallery = true;
+  stopCamera(); inGallery = true; document.body.dataset.view = "gallery";
   $("viewCapture").classList.add("hidden"); $("viewGallery").classList.remove("hidden"); updateAdminBar();
   try {
     const r = await gh("photos");

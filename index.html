@@ -29,35 +29,40 @@
     <button id="btnLogout" class="chip">Quitter admin</button>
   </div>
 
-  <main class="max-w-md mx-auto px-5 pt-6 pb-12">
-    <header class="text-center mb-6">
-      <img id="logoHeader" src="logo.png" alt="Logo du club" class="h-24 w-24 object-contain mx-auto mb-3 select-none logo-glow" onerror="this.style.display='none'">
-      <h1 id="themeTitle" class="fluo-title pulse text-5xl leading-none"></h1>
-      <p id="subtitle" class="mt-3 text-white/80"></p>
+  <main class="max-w-md mx-auto px-4 pt-3 pb-6">
+    <header class="app-head">
+      <img id="logoHeader" src="logo.png" alt="Logo du club" class="object-contain select-none logo-glow" onerror="this.style.display='none'">
+      <div class="min-w-0">
+        <h1 id="themeTitle" class="fluo-title pulse"></h1>
+        <p id="subtitle"></p>
+      </div>
     </header>
 
     <!-- CAMÉRA -->
     <section id="viewCapture">
-      <div class="cam-frame">
-        <div class="cam-inner">
-          <video id="video" playsinline muted autoplay></video>
-          <button id="camStart" class="cam-start">📸 Ouvrir l'appareil photo</button>
-          <div id="shutterFx" class="shutter-fx"></div>
+      <div class="cam-layout">
+        <div class="cam-frame">
+          <div class="cam-inner">
+            <video id="video" playsinline muted autoplay></video>
+            <button id="camStart" class="cam-start"></button>
+            <div id="shutterFx" class="shutter-fx"></div>
+          </div>
+          <div class="cam-footer"><img id="footLogo" src="logo.png" alt="" onerror="this.style.display='none'"><span id="footTitle" class="fluo-title"></span></div>
         </div>
-        <div class="cam-footer"><img id="footLogo" src="logo.png" alt="" onerror="this.style.display='none'"><span id="footTitle" class="fluo-title"></span></div>
+        <div class="cam-side">
+          <div class="cam-controls">
+            <button id="btnFlash" class="round-btn hidden" aria-label="Flash">⚡<small id="flashLbl">Flash off</small></button>
+            <button id="btnShot" class="shot idle" aria-label="Prendre la photo"></button>
+            <button id="btnFlip" class="round-btn" aria-label="Changer de caméra">🔄<small>Caméra</small></button>
+          </div>
+          <div class="cam-extra">
+            <label class="mini"><input id="fileInput" type="file" accept="image/*" class="hidden">🖼 Importer</label>
+            <button id="btnInstall" class="mini hidden">📲 Installer l'appli</button>
+          </div>
+          <p id="camHint" class="cam-hint"></p>
+          <p id="sentCount" class="text-center text-sm text-yellow-300 font-semibold"></p>
+        </div>
       </div>
-      <div class="cam-controls">
-        <button id="btnFlash" class="round-btn hidden" aria-label="Flash">⚡<small id="flashLbl">Flash off</small></button>
-        <button id="btnShot" class="shot" aria-label="Prendre la photo"></button>
-        <button id="btnFlip" class="round-btn" aria-label="Changer de caméra">🔄<small>Caméra</small></button>
-      </div>
-      <label class="block mt-5">
-        <input id="fileInput" type="file" accept="image/*" class="hidden">
-        <span class="btn-ghost">🖼 Importer depuis ma galerie</span>
-      </label>
-      <p class="text-center text-sm text-white/70 mt-4">Ta photo est scellée dès qu'elle est prise : découverte demain !</p>
-      <p id="sentCount" class="text-center text-sm mt-1 text-yellow-300 font-semibold"></p>
-      <button id="btnInstall" class="btn-ghost hidden mt-4">📲 Ajouter l'appli à mon écran d'accueil</button>
     </section>
 
     <!-- GALERIE -->
