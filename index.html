@@ -4,26 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Capsule photo – Soirée badminton</title>
-  <meta name="theme-color" content="#16324f">
+  <meta name="theme-color" content="#7a1fb8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=Pacifico&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { theme: { extend: {
-      colors: { court: '#16324f', line: '#f5f1e6', shuttle: '#ff5a4e' },
-      fontFamily: { ui: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'] }
+      colors: { court: '#2a0a4a', line: '#ffffff', shuttle: '#ff3d9a' },
+      fontFamily: { ui: ['Fredoka', 'system-ui', 'sans-serif'] }
     } } };
   </script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-court text-line font-ui min-h-screen">
+<body class="text-white font-ui min-h-screen">
   <main class="max-w-md mx-auto px-5 pt-8 pb-12">
 
     <!-- En-tête (5 taps sur le logo = accès admin) -->
     <header class="text-center mb-8">
-      <img id="logoHeader" src="logo.png" alt="Logo du club" class="h-20 w-20 object-contain mx-auto mb-3 select-none" onerror="this.style.display='none'">
-      <h1 id="themeTitle" class="font-extrabold text-3xl leading-tight"></h1>
+      <img id="logoHeader" src="logo.png" alt="Logo du club" class="h-28 w-28 object-contain mx-auto mb-4 select-none logo-glow" onerror="this.style.display='none'">
+      <h1 id="themeTitle" class="fluo-title text-5xl leading-none"></h1>
       <p id="subtitle" class="mt-2 text-line/70"></p>
     </header>
 
@@ -38,7 +38,7 @@
         <span class="btn-ghost">Importer depuis ma galerie</span>
       </label>
       <p class="text-center text-sm text-line/60 mt-5">Tu ne verras pas ta photo maintenant : toutes les photos seront dévoilées demain.</p>
-      <p id="sentCount" class="text-center text-sm mt-2 text-shuttle font-semibold"></p>
+      <p id="sentCount" class="text-center text-sm mt-2 text-yellow-300 font-semibold"></p>
     </section>
 
     <!-- VUE DÉVELOPPEMENT / CONFIRMATION -->

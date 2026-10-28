@@ -2,9 +2,9 @@
    ⚙️  CONFIGURATION — à modifier
    ===================================================================== */
 const CONFIG = {
-  THEME_NAME: "Soirée Fluo",                  // Thème affiché sur la page ET sur chaque photo
-  SUBTITLE: "Capture un souvenir, découvre-le demain !",
-  CLUB_NAME: "Badminton Brives-Charensac",
+  THEME_NAME: "Tournoi Fluo",                  // Thème affiché sur la page ET sur chaque photo
+  SUBTITLE: "Vendredi 30 octobre · Immortalise la soirée, découvre les photos demain !",
+  CLUB_NAME: "BC2V43",
   LOGO_URL: "logo.png",                       // Remplace simplement le fichier logo.png (PNG, idéalement fond transparent)
 
   // GitHub : dépôt PRIVÉ qui stocke les photos (≠ dépôt du site). Voir le guide.
@@ -15,17 +15,18 @@ const CONFIG = {
   UNLOCK_DATE: null,   // (la galerie ne s'ouvre que pour ceux qui ont le jeton, voir guide)
 
   // ⚠️ Mot de passe admin : visible dans le code, donc simple barrière « anti-curieux »
-  ADMIN_PASSWORD: "badminton2026",
+  ADMIN_PASSWORD: "badmintonbrives",
 
   // Style de la photo
   PHOTO_WIDTH: 1080,
   JPEG_QUALITY: 0.85,
-  FRAME_COLOR: "#f5f1e6",
-  ACCENT_COLOR: "#ff5a4e",
-  FONT_THEME: "Pacifico"
+  FRAME_COLOR: "#16052b",
+  ACCENT_COLOR: "#5dff3a",
+  FONT_THEME: "Titan One"
 };
 
 /* ===================================================================== */
+const FLUO = ["#5dff3a", "#ff7a3d", "#ffe93d", "#ff5a5a"]; // vert, orange, jaune, rouge (comme l'affiche)
 const $ = (id) => document.getElementById(id);
 const views = ["viewCapture", "viewSending", "viewDone", "viewGallery"];
 const show = (id) => views.forEach(v => $(v).classList.toggle("hidden", v !== id));
@@ -59,7 +60,8 @@ function showError(msg) { const e = $("errorMsg"); e.textContent = msg; e.classL
 function clearError() { $("errorMsg").classList.add("hidden"); }
 
 /* ---------- Init ---------- */
-$("themeTitle").textContent = CONFIG.THEME_NAME;
+$("themeTitle").innerHTML = [...CONFIG.THEME_NAME.toUpperCase()].map((ch, i) =>
+  ch === " " ? " " : `<span style="color:${FLUO[i % FLUO.length]}">${ch}</span>`).join("");
 $("subtitle").textContent = CONFIG.SUBTITLE;
 $("logoHeader").src = CONFIG.LOGO_URL;
 document.title = `${CONFIG.THEME_NAME} – ${CONFIG.CLUB_NAME}`;
@@ -107,6 +109,7 @@ function loadImage(src) {
 
 async function processPhoto(file) {
   await document.fonts.load(`80px "${CONFIG.FONT_THEME}"`);
+  await document.fonts.load('600 40px "Fredoka"');
   const bitmap = await loadImage(URL.createObjectURL(file)); // le navigateur applique l'orientation EXIF
   const W = CONFIG.PHOTO_WIDTH, M = Math.round(W * 0.04);
   const innerW = W - 2 * M, innerH = Math.round(innerW * 1.1), footer = Math.round(W * 0.26);
@@ -126,8 +129,8 @@ async function processPhoto(file) {
   for (let i = 0; i < p.length; i += 4) {
     let r = p[i], g = p[i + 1], b = p[i + 2];
     const l = 0.3 * r + 0.59 * g + 0.11 * b;
-    r = l + (r - l) * 1.25; g = l + (g - l) * 1.25; b = l + (b - l) * 1.25;   // saturation
-    r = (r - 128) * 1.12 + 128 + 10; g = (g - 128) * 1.12 + 128 + 2; b = (b - 128) * 1.12 + 128 - 8; // contraste + chaud
+    r = l + (r - l) * 1.4; g = l + (g - l) * 1.4; b = l + (b - l) * 1.4;   // saturation
+    r = (r - 128) * 1.15 + 128 + 8; g = (g - 128) * 1.15 + 128 - 4; b = (b - 128) * 1.15 + 128 + 10; // contraste + chaud
     p[i] = Math.max(0, Math.min(255, r)); p[i + 1] = Math.max(0, Math.min(255, g)); p[i + 2] = Math.max(0, Math.min(255, b));
   }
   ctx.putImageData(d, M, M);
@@ -136,6 +139,9 @@ async function processPhoto(file) {
   const g = ctx.createRadialGradient(W / 2, M + innerH / 2, innerW * 0.35, W / 2, M + innerH / 2, innerW * 0.85);
   g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.28)");
   ctx.save(); ctx.beginPath(); ctx.rect(M, M, innerW, innerH); ctx.clip(); ctx.fillStyle = g; ctx.fillRect(M, M, innerW, innerH); ctx.restore();
+
+  ctx.save(); ctx.shadowColor = "#ff3d9a"; ctx.shadowBlur = 24; ctx.strokeStyle = "#ff3d9a"; ctx.lineWidth = 6;
+  ctx.strokeRect(M, M, innerW, innerH); ctx.restore();
 
   // Pied : logo + thème + date
   const fy = M + innerH, cy = fy + footer / 2;
@@ -147,13 +153,19 @@ async function processPhoto(file) {
     textX = M + 10 + lw + (W - M - (M + 10 + lw)) / 2; // centre l'espace restant
   } catch { /* pas de logo : texte centré */ }
 
-  ctx.textAlign = align; ctx.textBaseline = "middle";
-  ctx.fillStyle = CONFIG.ACCENT_COLOR;
-  let fs = footer * 0.36; ctx.font = `${fs}px "${CONFIG.FONT_THEME}"`;
-  const maxW = (W - 2 * M) * (textX === W / 2 ? 1 : 0.72);
-  while (ctx.measureText(CONFIG.THEME_NAME).width > maxW && fs > 20) { fs -= 2; ctx.font = `${fs}px "${CONFIG.FONT_THEME}"`; }
-  ctx.fillText(CONFIG.THEME_NAME, textX, cy - footer * 0.08);
-  ctx.fillStyle = "#16324f"; ctx.font = `600 ${footer * 0.12}px "Bricolage Grotesque", sans-serif`;
+  const title = CONFIG.THEME_NAME.toUpperCase();
+  ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  let fs = footer * 0.36; const setF = () => ctx.font = `${fs}px "${CONFIG.FONT_THEME}"`; setF();
+  const maxW = (W - 2 * M) * (textX === W / 2 ? 1 : 0.7);
+  while (ctx.measureText(title).width > maxW && fs > 20) { fs -= 2; setF(); }
+  let x = textX - ctx.measureText(title).width / 2;
+  const ty = cy - footer * 0.08;
+  [...title].forEach((ch, i) => {
+    ctx.lineWidth = fs * 0.16; ctx.strokeStyle = "#000"; ctx.strokeText(ch, x, ty);
+    ctx.fillStyle = FLUO[i % FLUO.length]; ctx.fillText(ch, x, ty);
+    x += ctx.measureText(ch).width;
+  });
+  ctx.textAlign = "center"; ctx.fillStyle = "#ffffff"; ctx.font = `500 ${footer * 0.12}px "Fredoka", sans-serif`;
   ctx.fillText(`${CONFIG.CLUB_NAME} · ${new Date().toLocaleDateString("fr-FR")}`, textX, cy + footer * 0.28);
 
   return new Promise(res => c.toBlob(res, "image/jpeg", CONFIG.JPEG_QUALITY));
