@@ -3,6 +3,7 @@ body { font-family: var(--body-font), system-ui, sans-serif; color: var(--text);
   background: repeating-linear-gradient(135deg, var(--stripe) 0 14px, transparent 14px 28px),
               linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 45%, var(--bg3) 100%); background-attachment: fixed; }
 main { position: relative; z-index: 1; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.app-main { max-width: 460px; }
 .hidden { display: none !important; }
 
 .fluo-title { font-family: var(--title-font), sans-serif; font-weight: var(--title-weight); text-transform: uppercase; letter-spacing: .02em; }
@@ -83,7 +84,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--highlight);
 
 @media (orientation: landscape) and (max-height: 520px) {
   .app-head { display: none; }
-  main { padding-top: 8px; padding-bottom: 8px; max-width: none; }
+  .app-main { padding-top: 8px; padding-bottom: 8px; max-width: none; }
   .cam-layout { flex-direction: row; justify-content: center; gap: 18px; }
   .cam-inner { width: min(calc(100vw - 260px), calc((100dvh - 90px) * 1.333)); }
   .cam-side { width: 170px; }
@@ -91,3 +92,42 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--highlight);
   .cam-hint small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ===== Interface admin ===== */
+.admin-bar { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; gap: 6px; padding: 8px; }
+.tab { padding: 9px 14px; border-radius: 12px; border: 2px solid transparent; color: #fff; font-weight: 600; white-space: nowrap; background: rgba(255,255,255,.08); }
+.tab.active { background: var(--accent); color: var(--accent-text); }
+.tab.quit { margin-left: auto; opacity: .8; }
+#grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.design-grid { display: flex; flex-direction: column; gap: 14px; }
+.sec { font-weight: 600; font-size: 1.05rem; margin: 18px 0 8px; } .sec:first-child { margin-top: 0; }
+.f-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-size: .9rem; }
+.f-row input, select { padding: .65rem .8rem; border-radius: 10px; background: #fff; color: #1b1030; font-size: 1rem; width: 100%; }
+.colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.color-item { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
+input[type=color] { width: 44px; height: 44px; border: 2px solid #fff; border-radius: 10px; padding: 0; background: none; cursor: pointer; flex: none; }
+.presets { display: flex; gap: 8px; flex-wrap: wrap; }
+.preset { padding: 10px 18px; border-radius: 12px; border: 3px solid #fff; font-weight: 600; color: #fff; text-shadow: 0 1px 4px #000; text-transform: capitalize; }
+.preset.on { outline: 3px solid var(--highlight); outline-offset: 2px; }
+.toggle { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); }
+.design-actions { position: sticky; bottom: 8px; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 16px; background: rgba(10,0,25,.94); border: 2px solid var(--frame-border); z-index: 30; }
+.access-card { text-align: center; padding: 2rem 1.25rem; } .access-big { font-size: 4rem; }
+.hold.big { padding: 18px 28px; font-size: 1.1rem; margin-top: 18px; }
+
+/* ===== Ordinateur ===== */
+@media (min-width: 900px) {
+  .app-main { max-width: 1100px; padding-top: 20px; }
+  .app-head { gap: 18px; margin-bottom: 24px; } .app-head img { height: 84px; width: 84px; }
+  .app-head .fluo-title { font-size: 3rem; } .app-head .fluo-title span { -webkit-text-stroke: 5px var(--outline); }
+  #subtitle { font-size: 1.05rem; }
+  .cam-layout { flex-direction: row; justify-content: center; align-items: center; gap: 48px; }
+  .cam-inner { width: min(60vw, 720px, calc((100dvh - 240px) * 1.333)); }
+  .cam-side { width: 260px; }
+  .cam-controls { flex-direction: column-reverse; gap: 16px; }
+  #grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
+  .admin-bar { justify-content: center; } .tab.quit { margin-left: 24px; }
+  .design-grid { display: grid; grid-template-columns: 1fr 320px; gap: 22px; align-items: start; }
+  .design-actions { top: 80px; bottom: auto; }
+  .access-card { max-width: 560px; margin: 24px auto; }
+}

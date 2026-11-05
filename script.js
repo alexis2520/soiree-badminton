@@ -1,19 +1,7 @@
-const T = { ...THEMES[CONFIG.THEME] || THEMES.fluo, ...(CONFIG.THEME_OVERRIDES || {}) };
-const FLUO = T.titleColors, NEON = T.neon;
-(function applyTheme() {
-  const r = document.documentElement.style, set = (k, v) => r.setProperty(k, v);
-  T.bg.forEach((c, i) => set(`--bg${i + 1}`, c));
-  set("--stripe", T.stripes ? "rgba(255,255,255,.08)" : "transparent");
-  set("--text", T.text); set("--accent", T.accent); set("--accent-text", T.accentText); set("--highlight", T.highlight);
-  set("--outline", T.outline); set("--panel", T.panel); set("--frame-a", T.frame[0]); set("--frame-b", T.frame[1]); set("--frame-border", T.frameBorder);
-  set("--title-font", `"${T.titleFont}"`); set("--title-weight", T.titleWeight); set("--body-font", `"${T.bodyFont}"`);
-  set("--f-sat", T.filter.sat); set("--f-con", T.filter.con);
-  const l = document.createElement("link"); l.rel = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?" + T.fonts.map(f => "family=" + f).join("&") + "&display=swap"; document.head.appendChild(l);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", T.bg[1]);
-  document.querySelector(".floaters").innerHTML = T.floaters.map(e => `<span>${e}</span>`).join("");
-})();
+const BASE = JSON.stringify({ THEME_NAME: CONFIG.THEME_NAME, SUBTITLE: CONFIG.SUBTITLE, CLUB_NAME: CONFIG.CLUB_NAME, THEME: CONFIG.THEME, THEME_OVERRIDES: CONFIG.THEME_OVERRIDES || {} });
 const P = CONFIG.EVENT_ID ? CONFIG.EVENT_ID + "/" : "";   // dossier de l'événement dans le dépôt privé
+const SKEY = "capsule_settings_" + (CONFIG.EVENT_ID || "");
+let T, FLUO, NEON, fontLink;
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -28,7 +16,7 @@ function fluoSpans(text, off = 0) {
   return [...text.toUpperCase()].map((ch, i) => ch === " " ? " " : `<span style="color:${FLUO[(i + off) % FLUO.length]}">${ch}</span>`).join("");
 }
 function confetti() {
-  if (reduced) return;
+  if (reduced || (T && T.confetti === false)) return;
   const c = $("confetti"), x = c.getContext("2d"); c.width = innerWidth; c.height = innerHeight;
   const ps = Array.from({ length: 100 }, () => ({ x: innerWidth / 2, y: innerHeight * .75, vx: rnd(-8, 8), vy: rnd(-18, -6), s: rnd(6, 12), r: rnd(0, 6), c: pick([...FLUO, ...NEON]) }));
   let t = 0;
@@ -47,7 +35,7 @@ if (location.hash) history.replaceState(null, "", location.pathname + location.s
 const token = () => localStorage.getItem("gh_token");
 const API = `https://api.github.com/repos/${CONFIG.GH_OWNER}/${CONFIG.GH_REPO}/contents`;
 const gh = (path, opts = {}) => fetch(`${API}/${path}`, {
-  ...opts, headers: { Authorization: `Bearer ${token()}`, Accept: "application/vnd.github+json", ...(opts.headers || {}) }
+  cache: "no-cache", ...opts, headers: { Authorization: `Bearer ${token()}`, Accept: "application/vnd.github+json", ...(opts.headers || {}) }
 });
 const toB64 = (blob) => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.readAsDataURL(blob); });
 async function putFile(path, blob, message) {
@@ -67,31 +55,69 @@ async function isUnlockedRemotely() {
 
 /* ---------- État & navigation ---------- */
 let admin = sessionStorage.getItem("capsule_admin") === "1";
-let mode = sessionStorage.getItem("capsule_mode") || "auto";   // auto | photo | gallery
+let view = sessionStorage.getItem("capsule_admin") === "1" ? sessionStorage.getItem("capsule_view") : null;
 let unlocked = false, inGallery = false;
 let sent = parseInt(localStorage.getItem("capsule_sent_" + (CONFIG.EVENT_ID || "")) || "0", 10);
 
-$("themeTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME);
-$("footTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME);
-$("subtitle").textContent = CONFIG.SUBTITLE;
-$("logoHeader").src = CONFIG.LOGO_URL; $("footLogo").src = CONFIG.LOGO_URL;
-document.title = `${CONFIG.THEME_NAME} – ${CONFIG.CLUB_NAME}`;
+function applyAll() {
+  T = { ...(THEMES[CONFIG.THEME] || THEMES.fluo), ...(CONFIG.THEME_OVERRIDES || {}) }; FLUO = T.titleColors; NEON = T.neon;
+  const set = (k, v) => document.documentElement.style.setProperty(k, v);
+  T.bg.forEach((c, i) => set(`--bg${i + 1}`, c));
+  set("--stripe", T.stripes ? "rgba(255,255,255,.08)" : "transparent");
+  set("--text", T.text); set("--accent", T.accent); set("--accent-text", T.accentText); set("--highlight", T.highlight);
+  set("--outline", T.outline); set("--panel", T.panel); set("--frame-a", T.frame[0]); set("--frame-b", T.frame[1]); set("--frame-border", T.frameBorder);
+  set("--title-font", `"${T.titleFont}"`); set("--title-weight", T.titleWeight); set("--body-font", `"${T.bodyFont}"`);
+  set("--f-sat", T.filter.sat); set("--f-con", T.filter.con);
+  if (!fontLink) { fontLink = document.createElement("link"); fontLink.rel = "stylesheet"; document.head.appendChild(fontLink); }
+  const fu = "https://fonts.googleapis.com/css2?" + T.fonts.map(f => "family=" + f).join("&") + "&display=swap";
+  if (fontLink.dataset.u !== fu) { fontLink.dataset.u = fu; fontLink.href = fu; }
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", T.bg[1]);
+  const fl = document.querySelector(".floaters"), fh = T.floaters.map(x => `<span>${esc(x)}</span>`).join("");
+  if (fl.dataset.h !== fh) { fl.dataset.h = fh; fl.innerHTML = fh; }
+  $("themeTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME); $("themeTitle").classList.toggle("pulse", T.pulse !== false);
+  $("footTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME); $("subtitle").textContent = CONFIG.SUBTITLE;
+  ["logoHeader", "footLogo"].forEach(id => { $(id).style.display = T.showLogo === false ? "none" : ""; $(id).src = CONFIG.LOGO_URL; });
+  document.title = `${CONFIG.THEME_NAME} – ${CONFIG.CLUB_NAME}`;
+}
+const esc = (x) => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function mergeSettings(o) {
+  ["THEME_NAME", "SUBTITLE", "CLUB_NAME", "THEME"].forEach(k => { if (o[k] !== undefined) CONFIG[k] = o[k]; });
+  CONFIG.THEME_OVERRIDES = o.THEME_OVERRIDES || {};
+}
+async function loadSettings() {
+  try { const c = JSON.parse(localStorage.getItem(SKEY) || "null"); if (c) mergeSettings(c); } catch {}
+  applyAll();
+  if (!token()) return;
+  try {
+    const r = await gh(P + "settings.json", { headers: { Accept: "application/vnd.github.raw+json" } });
+    if (r.ok) { const o = await r.json(); localStorage.setItem(SKEY, JSON.stringify(o)); if (!draftDirty) { mergeSettings(o); applyAll(); } }
+  } catch {}
+}
+let draftDirty = false;
 function updateCount() { $("sentCount").textContent = sent ? `${sent} photo${sent > 1 ? "s" : ""} dans la capsule 🔒` : ""; }
 updateCount();
 
+const VIEWS = ["capture", "gallery", "design", "access"];
+function showView(v) {
+  view = v; inGallery = v === "gallery"; document.body.dataset.view = v;
+  VIEWS.forEach(n => $("view" + n[0].toUpperCase() + n.slice(1)).classList.toggle("hidden", n !== v));
+  if (v !== "capture") stopCamera();
+  updateAdminBar(); window.scrollTo(0, 0);
+  if (v === "design") renderDesign();
+}
 async function route() {
   unlocked = await isUnlockedRemotely();
-  const gallery = admin ? (mode === "gallery" || (mode === "auto" && unlocked)) : unlocked;
-  gallery ? openGallery() : showCapture();
+  go(admin && view ? view : unlocked ? "gallery" : "capture");
+}
+function go(v) {
+  sessionStorage.setItem("capsule_view", v);
+  if (v === "capture") showCapture(); else if (v === "gallery") openGallery(); else showView(v);
 }
 function showCapture() {
-  inGallery = false; document.body.dataset.view = "capture";
-  $("viewCapture").classList.remove("hidden"); $("viewGallery").classList.add("hidden");
-  updateAdminBar();
+  showView("capture");
   if (!token()) toast("Scanne le QR code de la soirée pour participer.", true);
   autoStart();
 }
-function setMode(m) { mode = m; sessionStorage.setItem("capsule_mode", m); m === "gallery" ? openGallery() : showCapture(); }
 
 /* ---------- Caméra stylisée ---------- */
 let stream, facing = "environment", hasTorch = false, flash = false, busy = false;
@@ -132,6 +158,7 @@ async function startCamera() {
     track.onended = () => { if (stream === s) stopCamera(); };
     hasTorch = !!track.getCapabilities?.().torch;
     $("btnFlash").classList.toggle("hidden", !(hasTorch || facing === "user"));
+    navigator.mediaDevices.enumerateDevices().then(d => $("btnFlip").classList.toggle("hidden", d.filter(x => x.kind === "videoinput").length < 2)).catch(() => {});
   } catch (e) {
     console.error(e); stream = null;
     setOverlay(`<span class="tap-ico">⚠️</span><span>${e.name === "NotAllowedError" ? "Autorise la caméra dans ton navigateur,<br>puis touche ici" : e.name === "NoApi" ? "Caméra indisponible ici.<br>Utilise « Importer »" : "Caméra occupée ou indisponible.<br>Touche ici pour réessayer"}</span>`);
@@ -209,7 +236,7 @@ function rr(ctx, x, y, w, h, r) {
 
 async function processPhoto(src, landscape, mirror) {
   await document.fonts.load(`${T.titleWeight} 80px "${T.titleFont}"`); await document.fonts.load(`500 40px "${T.bodyFont}"`);
-  const sw = src.videoWidth || src.naturalWidth, sh = src.videoHeight || src.naturalHeight;
+  const sw = src.videoWidth || src.naturalWidth || src.width, sh = src.videoHeight || src.naturalHeight || src.height;
   const W = landscape ? 1440 : 1080, M = Math.round(W * .04), iw = W - 2 * M;
   const ih = Math.round(iw * (landscape ? .75 : 1.1)), footer = Math.round(W * (landscape ? .17 : .26)), H = M + ih + footer;
 
@@ -261,6 +288,7 @@ async function processPhoto(src, landscape, mirror) {
   // Pied : logo + titre multicolore + club/date
   const fy = M + ih, cy = fy + footer / 2; let textX = W / 2;
   try {
+    if (T.showLogo === false) throw 0;
     const logo = await loadImage(CONFIG.LOGO_URL);
     const lh = footer * .62, lw = lh * (logo.width / logo.height);
     ctx.drawImage(logo, M + 10, cy - lh / 2, lw, lh);
@@ -283,6 +311,7 @@ async function processPhoto(src, landscape, mirror) {
 }
 
 /* ---------- Galerie ---------- */
+let galleryItems = [];
 const blobCache = {}; let currentPhoto = null, currentEl = null;
 async function fetchBlobUrl(path) {
   if (blobCache[path]) return blobCache[path];
@@ -291,14 +320,13 @@ async function fetchBlobUrl(path) {
   return (blobCache[path] = URL.createObjectURL(await r.blob()));
 }
 async function openGallery() {
-  stopCamera(); inGallery = true; document.body.dataset.view = "gallery";
-  $("viewCapture").classList.add("hidden"); $("viewGallery").classList.remove("hidden"); updateAdminBar();
+  showView("gallery");
   try {
     const r = await gh(P + "photos");
     if (!r.ok && r.status !== 404) throw new Error(r.status);
     const files = r.status === 404 ? [] : await r.json();
     const photos = files.filter(f => f.name.endsWith(".jpg")).sort((a, b) => b.name.localeCompare(a.name));
-    $("galleryEmpty").classList.toggle("hidden", photos.length > 0); $("grid").innerHTML = "";
+    $("galleryEmpty").classList.toggle("hidden", photos.length > 0); $("grid").innerHTML = ""; galleryItems = [];
     const io = new IntersectionObserver(es => es.forEach(async en => {
       if (!en.isIntersecting) return; io.unobserve(en.target);
       try { en.target.src = await fetchBlobUrl(en.target.dataset.path); } catch {}
@@ -306,7 +334,7 @@ async function openGallery() {
     photos.forEach(f => {
       const img = document.createElement("img");
       img.className = "thumb"; img.alt = "Photo de la soirée"; img.dataset.path = f.path;
-      img.onclick = () => openLightbox(f, img); $("grid").appendChild(img); io.observe(img);
+      img.onclick = () => openLightbox(f, img); galleryItems.push({ f, img }); $("grid").appendChild(img); io.observe(img);
     });
   } catch { toast("Impossible de charger la galerie. Rescanne le QR code.", true); }
 }
@@ -322,7 +350,7 @@ $("lightboxDel").onclick = async () => {
   if (!admin || !currentPhoto || !confirm("Supprimer définitivement cette photo ?")) return;
   const r = await gh(currentPhoto.path, { method: "DELETE", body: JSON.stringify({ message: "Suppression d'une photo", sha: currentPhoto.sha }) });
   if (!r.ok) return toast("Suppression échouée.", true);
-  currentEl.remove(); $("lightbox").classList.add("hidden"); toast("Photo supprimée 🗑");
+  currentEl.remove(); galleryItems = galleryItems.filter(x => x.f !== currentPhoto); $("lightbox").classList.add("hidden"); toast("Photo supprimée 🗑");
   $("galleryEmpty").classList.toggle("hidden", $("grid").children.length > 0);
 };
 
@@ -335,18 +363,20 @@ $("logoHeader").addEventListener("click", () => {
 if (WANT_ADMIN) $("adminPanel").classList.remove("hidden");
 $("adminBtn").onclick = () => {
   if ($("adminPwd").value !== CONFIG.ADMIN_PASSWORD) return toast("Mot de passe incorrect.", true);
-  admin = true; sessionStorage.setItem("capsule_admin", "1"); $("adminPanel").classList.add("hidden"); $("adminPwd").value = ""; route();
+  admin = true; sessionStorage.setItem("capsule_admin", "1"); $("adminPanel").classList.add("hidden"); $("adminPwd").value = ""; view = null; route();
 };
-$("btnLogout").onclick = () => { admin = false; sessionStorage.removeItem("capsule_admin"); sessionStorage.removeItem("capsule_mode"); mode = "auto"; route(); };
-$("btnToPhoto").onclick = () => setMode("photo");
-$("btnToGallery").onclick = () => setMode("gallery");
+$("adminPwd").addEventListener("keydown", e => { if (e.key === "Enter") $("adminBtn").click(); });
+$("btnLogout").onclick = () => { admin = false; sessionStorage.removeItem("capsule_admin"); sessionStorage.removeItem("capsule_view"); view = null; route(); };
+$("adminBar").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) go(b.dataset.go); });
 
 function updateAdminBar() {
   $("adminBar").classList.toggle("hidden", !admin);
   if (!admin) return;
-  $("lockState").textContent = unlocked ? "🔓 Galerie ouverte" : "🔒 Galerie verrouillée";
-  $("holdLabel").textContent = unlocked ? "Maintenir 3 s : REBLOQUER" : "Maintenir 3 s : DÉBLOQUER";
-  $("btnToPhoto").classList.toggle("hidden", !inGallery); $("btnToGallery").classList.toggle("hidden", inGallery);
+  $("lockState").textContent = unlocked ? "🔓" : "🔒";
+  document.querySelectorAll("[data-go]").forEach(b => b.classList.toggle("active", b.dataset.go === view));
+  $("accessIcon").textContent = unlocked ? "🔓" : "🔒";
+  $("accessState").textContent = unlocked ? "Galerie OUVERTE : tout le monde voit les photos" : "Galerie VERROUILLÉE : personne ne voit les photos";
+  $("holdLabel").textContent = unlocked ? "Maintenir 3 s pour REBLOQUER" : "Maintenir 3 s pour DÉBLOQUER";
 }
 async function setUnlocked(on) {
   if (on) await putFile(P + "unlocked.txt", new Blob(["1"]), "Galerie débloquée");
@@ -372,6 +402,79 @@ async function setUnlocked(on) {
   el.addEventListener("contextmenu", e => e.preventDefault());
 })($("holdBtn"), 3000);
 
+/* ---------- Apparence (admin) ---------- */
+const FONTS = [["Titan One", "Titan+One", 400], ["Lilita One", "Lilita+One", 400], ["Bangers", "Bangers", 400], ["Bungee", "Bungee", 400],
+  ["Righteous", "Righteous", 400], ["Pacifico", "Pacifico", 400], ["Permanent Marker", "Permanent+Marker", 400], ["Playfair Display", "Playfair+Display:wght@800", 800]];
+const setOv = (o) => { draftDirty = true; CONFIG.THEME_OVERRIDES = { ...CONFIG.THEME_OVERRIDES, ...o }; applyAll(); };
+const tc4 = () => Array.from({ length: 4 }, (_, i) => T.titleColors[i % T.titleColors.length]);
+function renderDesign() {
+  const col = (id, label, v) => `<label class="color-item"><input type="color" data-c="${id}" value="${v}">${label}</label>`;
+  const chk = (k, label) => `<label class="toggle"><input type="checkbox" data-t="${k}" ${(k === "stripes" ? T.stripes : T[k] !== false) ? "checked" : ""}>${label}</label>`;
+  $("designForm").innerHTML = `
+    <h3 class="sec">✏️ Textes</h3>
+    <label class="f-row">Titre<input type="text" data-k="THEME_NAME" value="${esc(CONFIG.THEME_NAME)}"></label>
+    <label class="f-row">Sous-titre<input type="text" data-k="SUBTITLE" value="${esc(CONFIG.SUBTITLE)}"></label>
+    <label class="f-row">Nom du club (sur les photos)<input type="text" data-k="CLUB_NAME" value="${esc(CONFIG.CLUB_NAME)}"></label>
+    <h3 class="sec">🎨 Thème de départ</h3>
+    <div class="presets">${Object.keys(THEMES).map(k => `<button class="preset ${k === CONFIG.THEME ? "on" : ""}" data-preset="${k}" style="background:linear-gradient(135deg,${THEMES[k].bg.join(",")})">${k}</button>`).join("")}</div>
+    <h3 class="sec">🌈 Couleurs</h3>
+    <div class="colors">${[col("bg0", "Fond 1", T.bg[0]), col("bg1", "Fond 2", T.bg[1]), col("bg2", "Fond 3", T.bg[2]), col("accent", "Boutons", T.accent),
+      col("text", "Texte", T.text), col("frameBorder", "Contour / halo", T.frameBorder), ...tc4().map((c, i) => col("t" + i, "Lettre " + (i + 1), c))].join("")}</div>
+    <h3 class="sec">🔤 Police du titre</h3>
+    <select data-font>${FONTS.map(f => `<option ${f[0] === T.titleFont ? "selected" : ""}>${f[0]}</option>`).join("")}</select>
+    <h3 class="sec">✨ Petits ajouts</h3>
+    <label class="f-row">Emojis qui flottent en fond (séparés par des espaces)<input type="text" data-emoji value="${esc(T.floaters.join(" "))}"></label>
+    ${chk("stripes", "Rayures diagonales")}${chk("confetti", "Confettis à chaque photo")}${chk("pulse", "Titre qui pulse")}${chk("showLogo", "Afficher le logo (page et photos)")}`;
+}
+$("designForm").addEventListener("input", e => {
+  const t = e.target, d = t.dataset;
+  if (d.k) { draftDirty = true; CONFIG[d.k] = t.value; applyAll(); }
+  else if (d.c) {
+    if (d.c.startsWith("bg")) { const bg = [...T.bg]; bg[+d.c[2]] = t.value; setOv({ bg }); }
+    else if (d.c !== "text" && d.c[0] === "t") { const a = tc4(); a[+d.c[1]] = t.value; setOv({ titleColors: a }); }
+    else setOv({ [d.c]: t.value });
+  } else if (d.emoji !== undefined) setOv({ floaters: t.value.split(/\s+/).filter(Boolean).slice(0, 6) });
+  else if (d.t) setOv({ [d.t]: t.checked });
+  else if (d.font !== undefined) { const f = FONTS.find(x => x[0] === t.value); setOv({ titleFont: f[0], titleWeight: f[2], fonts: [f[1], (THEMES[CONFIG.THEME] || THEMES.fluo).fonts.slice(-1)[0]] }); }
+});
+$("designForm").addEventListener("click", e => {
+  const b = e.target.closest("[data-preset]"); if (!b) return;
+  draftDirty = true; CONFIG.THEME = b.dataset.preset; CONFIG.THEME_OVERRIDES = {}; applyAll(); renderDesign();
+});
+async function saveSettings() {
+  const o = { THEME_NAME: CONFIG.THEME_NAME, SUBTITLE: CONFIG.SUBTITLE, CLUB_NAME: CONFIG.CLUB_NAME, THEME: CONFIG.THEME, THEME_OVERRIDES: CONFIG.THEME_OVERRIDES || {} };
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(o, null, 1))));
+  for (let i = 0; i < 5; i++) {
+    const r0 = await gh(P + "settings.json"), sha = r0.ok ? (await r0.json()).sha : undefined;
+    const r = await gh(P + "settings.json", { method: "PUT", body: JSON.stringify({ message: "Réglages d'apparence", content, sha }) });
+    if (r.ok) { localStorage.setItem(SKEY, JSON.stringify(o)); draftDirty = false; return; }
+    await sleep(500 + Math.random() * 800);
+  }
+  throw new Error("save");
+}
+$("btnSaveDesign").onclick = async () => { try { await saveSettings(); toast("Apparence enregistrée pour tout le monde ✅"); } catch { toast("Enregistrement échoué. Vérifie le jeton.", true); } };
+$("btnResetDesign").onclick = () => { if (!confirm("Revenir aux réglages du fichier config.js ?")) return; draftDirty = true; mergeSettings(JSON.parse(BASE)); applyAll(); renderDesign(); };
+$("btnTestPhoto").onclick = async () => {
+  const c = document.createElement("canvas"); c.width = 1200; c.height = 900; const x = c.getContext("2d");
+  const g = x.createLinearGradient(0, 0, 1200, 900); g.addColorStop(0, "#3a86ff"); g.addColorStop(.5, "#8338ec"); g.addColorStop(1, "#ff006e");
+  x.fillStyle = g; x.fillRect(0, 0, 1200, 900); x.font = "320px serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("🏸", 600, 450);
+  const url = URL.createObjectURL(await processPhoto(c, landscapeNow(), false));
+  currentPhoto = null; $("lightboxImg").src = url; $("lightboxDl").href = url; $("lightboxDl").download = "photo-test.jpg";
+  $("lightboxDel").classList.add("hidden"); $("lightbox").classList.remove("hidden");
+};
+
+/* ---------- Raccourcis clavier (PC) ---------- */
+addEventListener("keydown", e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (!$("lightbox").classList.contains("hidden")) {
+    if (e.key === "Escape") $("lightboxClose").click();
+    const i = galleryItems.findIndex(x => x.f === currentPhoto), n = galleryItems[i + (e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0)];
+    if (i >= 0 && n && e.key.startsWith("Arrow")) openLightbox(n.f, n.img);
+    return;
+  }
+  if ((e.key === " " || e.key === "Enter") && view === "capture" && e.target.tagName !== "BUTTON") { e.preventDefault(); $("btnShot").click(); }
+});
+
 /* ---------- Appli installable (raccourci écran d'accueil) ---------- */
 (function setupInstall() {
   const dir = new URL("./", location.href).href;
@@ -390,4 +493,6 @@ async function setUnlocked(on) {
     : alert("iPhone : touche Partager (carré avec flèche) puis « Sur l'écran d'accueil ».\nAndroid : menu ⋮ du navigateur puis « Installer l'application ».");
 })();
 
+applyAll();
+loadSettings();
 route();
