@@ -27,6 +27,7 @@ const CONFIG = {
    ===================================================================== */
 const THEMES = {
   fluo: {
+    label: "Fluo",
     bg: ["#b00fc9", "#7a1fb8", "#d8369a"],     // dégradé du fond (3 couleurs)
     stripes: true,                              // rayures diagonales
     text: "#ffffff",                            // couleur du texte
@@ -45,6 +46,7 @@ const THEMES = {
     floaters: ["🏸", "✨", "⚡", "🏸", "✨"]     // emojis qui flottent en fond
   },
   elegant: {
+    label: "Élégant",
     bg: ["#0b1d3a", "#12315c", "#0b1d3a"], stripes: false, text: "#f8f5ec",
     accent: "#d4af37", accentText: "#111111", highlight: "#f5d76e", outline: "#000000",
     panel: "rgba(5,12,30,.55)", frame: ["#07122a", "#12315c"], frameBorder: "#d4af37",
@@ -54,6 +56,7 @@ const THEMES = {
     fonts: ["Playfair+Display:wght@800", "Poppins:wght@400;500;600"], floaters: ["🏸", "⭐", "✨"]
   },
   sunset: {
+    label: "Sunset",
     bg: ["#ff7a3d", "#ff3d6e", "#8a2be2"], stripes: true, text: "#ffffff",
     accent: "#ffe93d", accentText: "#2b0a3d", highlight: "#fff3a0", outline: "#2b0a3d",
     panel: "rgba(60,5,40,.4)", frame: ["#2b0a3d", "#5a1450"], frameBorder: "#ffe93d",
@@ -61,5 +64,15 @@ const THEMES = {
     photoHue: [290, 350], photoSat: 55, filter: { sat: 1.3, con: 1.1, tint: [12, 2, -6] },
     titleFont: "Lilita One", titleWeight: 400, bodyFont: "Nunito",
     fonts: ["Lilita+One", "Nunito:wght@400;600;700"], floaters: ["🏸", "🌅", "✨"]
+  },
+  noel: {
+    label: "Noël",
+    bg: ["#0b3d2e", "#146b3a", "#8e1b1b"], stripes: true, text: "#ffffff",
+    accent: "#ffd34d", accentText: "#3b0a0a", highlight: "#ffe9a8", outline: "#2a0505",
+    panel: "rgba(8,36,22,.55)", frame: ["#1a0505", "#0f3d28"], frameBorder: "#ff4d4d",
+    neon: ["#ff4d4d", "#ffd34d", "#ffffff", "#3ddc84", "#ff9ecb"], titleColors: ["#ff4d4d", "#ffffff", "#3ddc84", "#ffd34d"],
+    photoHue: [130, 170], photoSat: 55, filter: { sat: 1.2, con: 1.1, tint: [10, 2, -6] },
+    titleFont: "Mountains of Christmas", titleWeight: 700, bodyFont: "Nunito",
+    fonts: ["Mountains+of+Christmas:wght@700", "Nunito:wght@400;600;700"], floaters: ["🎄", "❄️", "🎁", "⭐", "🏸", "❄️"]
   }
 };

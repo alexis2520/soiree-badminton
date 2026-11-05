@@ -404,10 +404,11 @@ async function setUnlocked(on) {
 
 /* ---------- Apparence (admin) ---------- */
 const FONTS = [["Titan One", "Titan+One", 400], ["Lilita One", "Lilita+One", 400], ["Bangers", "Bangers", 400], ["Bungee", "Bungee", 400],
-  ["Righteous", "Righteous", 400], ["Pacifico", "Pacifico", 400], ["Permanent Marker", "Permanent+Marker", 400], ["Playfair Display", "Playfair+Display:wght@800", 800]];
+  ["Righteous", "Righteous", 400], ["Pacifico", "Pacifico", 400], ["Permanent Marker", "Permanent+Marker", 400], ["Playfair Display", "Playfair+Display:wght@800", 800], ["Mountains of Christmas", "Mountains+of+Christmas:wght@700", 700]];
 const setOv = (o) => { draftDirty = true; CONFIG.THEME_OVERRIDES = { ...CONFIG.THEME_OVERRIDES, ...o }; applyAll(); };
 const tc4 = () => Array.from({ length: 4 }, (_, i) => T.titleColors[i % T.titleColors.length]);
 function renderDesign() {
+  if (!window._fontsPrev) { window._fontsPrev = 1; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?" + FONTS.map(f => "family=" + f[1]).join("&") + "&display=swap"; document.head.appendChild(l); }
   const col = (id, label, v) => `<label class="color-item"><input type="color" data-c="${id}" value="${v}">${label}</label>`;
   const chk = (k, label) => `<label class="toggle"><input type="checkbox" data-t="${k}" ${(k === "stripes" ? T.stripes : T[k] !== false) ? "checked" : ""}>${label}</label>`;
   $("designForm").innerHTML = `
@@ -416,12 +417,12 @@ function renderDesign() {
     <label class="f-row">Sous-titre<input type="text" data-k="SUBTITLE" value="${esc(CONFIG.SUBTITLE)}"></label>
     <label class="f-row">Nom du club (sur les photos)<input type="text" data-k="CLUB_NAME" value="${esc(CONFIG.CLUB_NAME)}"></label>
     <h3 class="sec">🎨 Thème de départ</h3>
-    <div class="presets">${Object.keys(THEMES).map(k => `<button class="preset ${k === CONFIG.THEME ? "on" : ""}" data-preset="${k}" style="background:linear-gradient(135deg,${THEMES[k].bg.join(",")})">${k}</button>`).join("")}</div>
+    <div class="presets">${Object.keys(THEMES).map(k => `<button class="preset ${k === CONFIG.THEME ? "on" : ""}" data-preset="${k}" style="background:linear-gradient(135deg,${THEMES[k].bg.join(",")})">${THEMES[k].label || k}</button>`).join("")}</div>
     <h3 class="sec">🌈 Couleurs</h3>
     <div class="colors">${[col("bg0", "Fond 1", T.bg[0]), col("bg1", "Fond 2", T.bg[1]), col("bg2", "Fond 3", T.bg[2]), col("accent", "Boutons", T.accent),
       col("text", "Texte", T.text), col("frameBorder", "Contour / halo", T.frameBorder), ...tc4().map((c, i) => col("t" + i, "Lettre " + (i + 1), c))].join("")}</div>
     <h3 class="sec">🔤 Police du titre</h3>
-    <select data-font>${FONTS.map(f => `<option ${f[0] === T.titleFont ? "selected" : ""}>${f[0]}</option>`).join("")}</select>
+    <div class="fonts">${FONTS.map(f => `<button class="font-btn ${f[0] === T.titleFont ? "on" : ""}" data-fontname="${f[0]}" style="font-family:'${f[0]}',sans-serif;font-weight:${f[2]}">${f[0]}</button>`).join("")}</div>
     <h3 class="sec">✨ Petits ajouts</h3>
     <label class="f-row">Emojis qui flottent en fond (séparés par des espaces)<input type="text" data-emoji value="${esc(T.floaters.join(" "))}"></label>
     ${chk("stripes", "Rayures diagonales")}${chk("confetti", "Confettis à chaque photo")}${chk("pulse", "Titre qui pulse")}${chk("showLogo", "Afficher le logo (page et photos)")}`;
@@ -438,6 +439,8 @@ $("designForm").addEventListener("input", e => {
   else if (d.font !== undefined) { const f = FONTS.find(x => x[0] === t.value); setOv({ titleFont: f[0], titleWeight: f[2], fonts: [f[1], (THEMES[CONFIG.THEME] || THEMES.fluo).fonts.slice(-1)[0]] }); }
 });
 $("designForm").addEventListener("click", e => {
+  const fb = e.target.closest("[data-fontname]");
+  if (fb) { const f = FONTS.find(x => x[0] === fb.dataset.fontname); setOv({ titleFont: f[0], titleWeight: f[2], fonts: [f[1], (THEMES[CONFIG.THEME] || THEMES.fluo).fonts.slice(-1)[0]] }); renderDesign(); return; }
   const b = e.target.closest("[data-preset]"); if (!b) return;
   draftDirty = true; CONFIG.THEME = b.dataset.preset; CONFIG.THEME_OVERRIDES = {}; applyAll(); renderDesign();
 });
