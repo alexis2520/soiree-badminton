@@ -1,20 +1,19 @@
-/* =====================================================================
-   ⚙️  CONFIGURATION — à modifier
-   ===================================================================== */
-const CONFIG = {
-  THEME_NAME: "Tournoi Fluo",
-  SUBTITLE: "Vendredi 30 octobre · Immortalise la soirée, découvre les photos demain !",
-  CLUB_NAME: "BCV 43",
-  LOGO_URL: "logo.png",
-  GH_OWNER: "alexis2520",
-  GH_REPO: "soiree-badminton-photos",   // dépôt PRIVÉ des photos
-  ADMIN_PASSWORD: "badminton2026",      // ⚠️ à changer (visible dans le code)
-  JPEG_QUALITY: 0.85,
-  FONT_THEME: "Titan One"
-};
-/* ===================================================================== */
-const FLUO = ["#5dff3a", "#ff7a3d", "#ffe93d", "#ff5a5a"];
-const NEON = ["#ff3d9a", "#2de2ff", "#5dff3a", "#ffe93d", "#ff7a3d", "#b57bff"];
+const T = { ...THEMES[CONFIG.THEME] || THEMES.fluo, ...(CONFIG.THEME_OVERRIDES || {}) };
+const FLUO = T.titleColors, NEON = T.neon;
+(function applyTheme() {
+  const r = document.documentElement.style, set = (k, v) => r.setProperty(k, v);
+  T.bg.forEach((c, i) => set(`--bg${i + 1}`, c));
+  set("--stripe", T.stripes ? "rgba(255,255,255,.08)" : "transparent");
+  set("--text", T.text); set("--accent", T.accent); set("--accent-text", T.accentText); set("--highlight", T.highlight);
+  set("--outline", T.outline); set("--panel", T.panel); set("--frame-a", T.frame[0]); set("--frame-b", T.frame[1]); set("--frame-border", T.frameBorder);
+  set("--title-font", `"${T.titleFont}"`); set("--title-weight", T.titleWeight); set("--body-font", `"${T.bodyFont}"`);
+  set("--f-sat", T.filter.sat); set("--f-con", T.filter.con);
+  const l = document.createElement("link"); l.rel = "stylesheet";
+  l.href = "https://fonts.googleapis.com/css2?" + T.fonts.map(f => "family=" + f).join("&") + "&display=swap"; document.head.appendChild(l);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", T.bg[1]);
+  document.querySelector(".floaters").innerHTML = T.floaters.map(e => `<span>${e}</span>`).join("");
+})();
+const P = CONFIG.EVENT_ID ? CONFIG.EVENT_ID + "/" : "";   // dossier de l'événement dans le dépôt privé
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -26,7 +25,7 @@ function toast(msg, err) {
   clearTimeout(toast.t); toast.t = setTimeout(() => t.className = "toast", 3000);
 }
 function fluoSpans(text, off = 0) {
-  return [...text.toUpperCase()].map((ch, i) => ch === " " ? " " : `<span style="color:${FLUO[(i + off) % 4]}">${ch}</span>`).join("");
+  return [...text.toUpperCase()].map((ch, i) => ch === " " ? " " : `<span style="color:${FLUO[(i + off) % FLUO.length]}">${ch}</span>`).join("");
 }
 function confetti() {
   if (reduced) return;
@@ -63,14 +62,14 @@ async function putFile(path, blob, message) {
 }
 async function isUnlockedRemotely() {
   if (!token()) return false;
-  try { return (await gh("unlocked.txt")).ok; } catch { return false; }
+  try { return (await gh(P + "unlocked.txt")).ok; } catch { return false; }
 }
 
 /* ---------- État & navigation ---------- */
 let admin = sessionStorage.getItem("capsule_admin") === "1";
 let mode = sessionStorage.getItem("capsule_mode") || "auto";   // auto | photo | gallery
 let unlocked = false, inGallery = false;
-let sent = parseInt(localStorage.getItem("capsule_sent") || "0", 10);
+let sent = parseInt(localStorage.getItem("capsule_sent_" + (CONFIG.EVENT_ID || "")) || "0", 10);
 
 $("themeTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME);
 $("footTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME);
@@ -194,8 +193,8 @@ $("fileInput").addEventListener("change", async (e) => {
 async function sendBlob(blob) {
   toast("Envoi en cours…");
   try {
-    await putFile(`photos/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`, blob, "Nouvelle photo");
-    sent++; localStorage.setItem("capsule_sent", sent); updateCount();
+    await putFile(`${P}photos/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`, blob, "Nouvelle photo");
+    sent++; localStorage.setItem("capsule_sent_" + (CONFIG.EVENT_ID || ""), sent); updateCount();
     toast("Photo scellée dans la capsule 🔒 Rendez-vous demain !");
   } catch (e) { console.error(e); toast("Envoi échoué. Vérifie ta connexion et réessaie.", true); }
 }
@@ -209,17 +208,17 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 async function processPhoto(src, landscape, mirror) {
-  await document.fonts.load(`80px "${CONFIG.FONT_THEME}"`); await document.fonts.load('500 40px "Fredoka"');
+  await document.fonts.load(`${T.titleWeight} 80px "${T.titleFont}"`); await document.fonts.load(`500 40px "${T.bodyFont}"`);
   const sw = src.videoWidth || src.naturalWidth, sh = src.videoHeight || src.naturalHeight;
   const W = landscape ? 1440 : 1080, M = Math.round(W * .04), iw = W - 2 * M;
   const ih = Math.round(iw * (landscape ? .75 : 1.1)), footer = Math.round(W * (landscape ? .17 : .26)), H = M + ih + footer;
 
   // Style aléatoire (unique à chaque photo, sobre)
-  const neon = pick(NEON), hue = Math.floor(rnd(250, 330)), style = pick(["glow", "double", "dashed", "brackets"]), radius = Math.round(rnd(0, 48));
+  const neon = pick(NEON), hue = Math.floor(rnd(T.photoHue[0], T.photoHue[1])), style = pick(["glow", "double", "dashed", "brackets"]), radius = Math.round(rnd(0, 48));
 
   const c = document.createElement("canvas"); c.width = W; c.height = H;
   const ctx = c.getContext("2d");
-  const bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, `hsl(${hue},60%,9%)`); bg.addColorStop(1, `hsl(${hue + 30},70%,19%)`);
+  const bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, `hsl(${hue},${T.photoSat}%,9%)`); bg.addColorStop(1, `hsl(${hue + 30},${T.photoSat + 10}%,19%)`);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
   // Photo + filtre fluo (sur un calque à part)
@@ -231,8 +230,8 @@ async function processPhoto(src, landscape, mirror) {
   const d = tc.getImageData(0, 0, iw, ih), p = d.data;
   for (let i = 0; i < p.length; i += 4) {
     let r = p[i], g = p[i + 1], b = p[i + 2]; const l = .3 * r + .59 * g + .11 * b;
-    r = l + (r - l) * 1.4; g = l + (g - l) * 1.4; b = l + (b - l) * 1.4;
-    r = (r - 128) * 1.15 + 136; g = (g - 128) * 1.15 + 124; b = (b - 128) * 1.15 + 138;
+    r = l + (r - l) * T.filter.sat; g = l + (g - l) * T.filter.sat; b = l + (b - l) * T.filter.sat;
+    r = (r - 128) * T.filter.con + 128 + T.filter.tint[0]; g = (g - 128) * T.filter.con + 128 + T.filter.tint[1]; b = (b - 128) * T.filter.con + 128 + T.filter.tint[2];
     p[i] = Math.max(0, Math.min(255, r)); p[i + 1] = Math.max(0, Math.min(255, g)); p[i + 2] = Math.max(0, Math.min(255, b));
   }
   tc.putImageData(d, 0, 0);
@@ -267,17 +266,17 @@ async function processPhoto(src, landscape, mirror) {
     ctx.drawImage(logo, M + 10, cy - lh / 2, lw, lh);
     textX = M + 10 + lw + (W - M - (M + 10 + lw)) / 2;
   } catch {}
-  const title = CONFIG.THEME_NAME.toUpperCase(), off = Math.floor(rnd(0, 4));
+  const title = CONFIG.THEME_NAME.toUpperCase(), off = Math.floor(rnd(0, FLUO.length));
   ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
-  let fs = footer * .36; const setF = () => ctx.font = `${fs}px "${CONFIG.FONT_THEME}"`; setF();
+  let fs = footer * .36; const setF = () => ctx.font = `${T.titleWeight} ${fs}px "${T.titleFont}"`; setF();
   const maxW = (W - 2 * M) * (textX === W / 2 ? 1 : .7);
   while (ctx.measureText(title).width > maxW && fs > 20) { fs -= 2; setF(); }
   let x = textX - ctx.measureText(title).width / 2; const ty = cy - footer * .08;
   [...title].forEach((chr, i) => {
-    ctx.lineWidth = fs * .16; ctx.strokeStyle = "#000"; ctx.strokeText(chr, x, ty);
-    ctx.fillStyle = FLUO[(i + off) % 4]; ctx.fillText(chr, x, ty); x += ctx.measureText(chr).width;
+    ctx.lineWidth = fs * .16; ctx.strokeStyle = T.outline; ctx.strokeText(chr, x, ty);
+    ctx.fillStyle = FLUO[(i + off) % FLUO.length]; ctx.fillText(chr, x, ty); x += ctx.measureText(chr).width;
   });
-  ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.font = `500 ${footer * .12}px "Fredoka", sans-serif`;
+  ctx.textAlign = "center"; ctx.fillStyle = T.text; ctx.font = `500 ${footer * .12}px "${T.bodyFont}", sans-serif`;
   ctx.fillText(`${CONFIG.CLUB_NAME} · ${new Date().toLocaleDateString("fr-FR")}`, textX, cy + footer * .28);
 
   return new Promise(res => c.toBlob(res, "image/jpeg", CONFIG.JPEG_QUALITY));
@@ -295,7 +294,7 @@ async function openGallery() {
   stopCamera(); inGallery = true; document.body.dataset.view = "gallery";
   $("viewCapture").classList.add("hidden"); $("viewGallery").classList.remove("hidden"); updateAdminBar();
   try {
-    const r = await gh("photos");
+    const r = await gh(P + "photos");
     if (!r.ok && r.status !== 404) throw new Error(r.status);
     const files = r.status === 404 ? [] : await r.json();
     const photos = files.filter(f => f.name.endsWith(".jpg")).sort((a, b) => b.name.localeCompare(a.name));
@@ -350,12 +349,12 @@ function updateAdminBar() {
   $("btnToPhoto").classList.toggle("hidden", !inGallery); $("btnToGallery").classList.toggle("hidden", inGallery);
 }
 async function setUnlocked(on) {
-  if (on) await putFile("unlocked.txt", new Blob(["1"]), "Galerie débloquée");
+  if (on) await putFile(P + "unlocked.txt", new Blob(["1"]), "Galerie débloquée");
   else {
-    const r = await gh("unlocked.txt");
+    const r = await gh(P + "unlocked.txt");
     if (r.ok) {
       const { sha } = await r.json();
-      const d = await gh("unlocked.txt", { method: "DELETE", body: JSON.stringify({ message: "Galerie reverrouillée", sha }) });
+      const d = await gh(P + "unlocked.txt", { method: "DELETE", body: JSON.stringify({ message: "Galerie reverrouillée", sha }) });
       if (!d.ok) throw new Error("delete");
     }
   }
