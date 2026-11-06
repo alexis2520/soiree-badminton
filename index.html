@@ -91,6 +91,14 @@
         <h2 id="accessState" class="text-xl font-semibold mt-2"></h2>
         <p class="opacity-80 mt-2 text-sm">Pour éviter les erreurs, maintiens le bouton enfoncé 3 secondes.</p>
         <button id="holdBtn" class="hold big"><span id="holdLabel"></span></button>
+        <hr class="my-6 border-white/20">
+        <h3 class="sec">🔑 Jeton GitHub de ce navigateur</h3>
+        <label class="f-row text-left">Colle ici un nouveau jeton (github_pat_…)
+          <input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+        <div class="flex gap-2 flex-wrap">
+          <button id="btnSaveToken" class="btn-ghost" style="flex:1;min-width:160px">Enregistrer le jeton</button>
+          <button id="btnTestToken" class="btn-ghost" style="flex:1;min-width:160px">🔌 Tester la connexion</button>
+        </div>
       </div>
     </section>
 

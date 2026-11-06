@@ -12,6 +12,13 @@ function toast(msg, err) {
   const t = $("toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
   clearTimeout(toast.t); toast.t = setTimeout(() => t.className = "toast", 3000);
 }
+function explainErr(e) {
+  if (!token()) return "Aucun jeton dans ce navigateur : colle-le dans l'onglet Accès, ou ouvre le lien du QR code (avec #k=…).";
+  const st = e && e.status;
+  if (st === 401) return "Jeton invalide ou expiré : crée-en un nouveau sur GitHub (onglet Accès).";
+  if (st === 403 || st === 404) return "Le jeton n'a pas le droit d'écrire (Contents : Read and write) ou ne couvre pas ce dépôt.";
+  return "Échec (code " + (st || "?") + "). Vérifie ta connexion et le jeton.";
+}
 function fluoSpans(text, off = 0) {
   return [...text.toUpperCase()].map((ch, i) => ch === " " ? " " : `<span style="color:${FLUO[(i + off) % FLUO.length]}">${ch}</span>`).join("");
 }
@@ -44,7 +51,7 @@ async function putFile(path, blob, message) {
     const r = await gh(path, { method: "PUT", body: JSON.stringify({ message, content }) });
     if (r.ok || r.status === 422) return;
     if (r.status === 409 || r.status >= 500) { await sleep(300 + Math.random() * 1500); continue; }
-    throw new Error(await r.text());
+    throw Object.assign(new Error(await r.text()), { status: r.status });
   }
   throw new Error("Trop de tentatives");
 }
@@ -223,7 +230,7 @@ async function sendBlob(blob) {
     await putFile(`${P}photos/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`, blob, "Nouvelle photo");
     sent++; localStorage.setItem("capsule_sent_" + (CONFIG.EVENT_ID || ""), sent); updateCount();
     toast("Photo scellée dans la capsule 🔒 Rendez-vous demain !");
-  } catch (e) { console.error(e); toast("Envoi échoué. Vérifie ta connexion et réessaie.", true); }
+  } catch (e) { console.error(e); toast(e.status === 401 || e.status === 403 ? "Lien expiré : rescanne le nouveau QR code de la soirée." : "Envoi échoué. Vérifie ta connexion et réessaie.", true); }
 }
 
 /* ---------- Traitement de la photo ---------- */
@@ -396,7 +403,7 @@ async function setUnlocked(on) {
   const stop = () => { clearTimeout(timer); el.classList.remove("holding"); };
   el.addEventListener("pointerdown", () => {
     el.classList.add("holding");
-    timer = setTimeout(async () => { stop(); navigator.vibrate?.(120); try { await setUnlocked(!unlocked); } catch { toast("Action échouée. Vérifie le jeton.", true); } }, ms);
+    timer = setTimeout(async () => { stop(); navigator.vibrate?.(120); try { await setUnlocked(!unlocked); } catch (e) { toast(explainErr(e), true); } }, ms);
   });
   ["pointerup", "pointerleave", "pointercancel"].forEach(ev => el.addEventListener(ev, stop));
   el.addEventListener("contextmenu", e => e.preventDefault());
@@ -447,15 +454,17 @@ $("designForm").addEventListener("click", e => {
 async function saveSettings() {
   const o = { THEME_NAME: CONFIG.THEME_NAME, SUBTITLE: CONFIG.SUBTITLE, CLUB_NAME: CONFIG.CLUB_NAME, THEME: CONFIG.THEME, THEME_OVERRIDES: CONFIG.THEME_OVERRIDES || {} };
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(o, null, 1))));
+  let st;
   for (let i = 0; i < 5; i++) {
     const r0 = await gh(P + "settings.json"), sha = r0.ok ? (await r0.json()).sha : undefined;
     const r = await gh(P + "settings.json", { method: "PUT", body: JSON.stringify({ message: "Réglages d'apparence", content, sha }) });
     if (r.ok) { localStorage.setItem(SKEY, JSON.stringify(o)); draftDirty = false; return; }
+    st = r.status; if (st === 401 || st === 403 || st === 404) break;
     await sleep(500 + Math.random() * 800);
   }
-  throw new Error("save");
+  throw Object.assign(new Error("save"), { status: st });
 }
-$("btnSaveDesign").onclick = async () => { try { await saveSettings(); toast("Apparence enregistrée pour tout le monde ✅"); } catch { toast("Enregistrement échoué. Vérifie le jeton.", true); } };
+$("btnSaveDesign").onclick = async () => { try { await saveSettings(); toast("Apparence enregistrée pour tout le monde ✅"); } catch (e) { toast(explainErr(e), true); } };
 $("btnResetDesign").onclick = () => { if (!confirm("Revenir aux réglages du fichier config.js ?")) return; draftDirty = true; mergeSettings(JSON.parse(BASE)); applyAll(); renderDesign(); };
 $("btnTestPhoto").onclick = async () => {
   const c = document.createElement("canvas"); c.width = 1200; c.height = 900; const x = c.getContext("2d");
@@ -477,6 +486,22 @@ addEventListener("keydown", e => {
   }
   if ((e.key === " " || e.key === "Enter") && view === "capture" && e.target.tagName !== "BUTTON") { e.preventDefault(); $("btnShot").click(); }
 });
+
+/* ---------- Jeton GitHub (admin) ---------- */
+$("btnSaveToken").onclick = () => {
+  const v = $("tokenInput").value.trim();
+  if (!v) return toast("Colle d'abord un jeton.", true);
+  localStorage.setItem("gh_token", v); $("tokenInput").value = ""; toast("Jeton enregistré. Teste la connexion 👇");
+};
+$("btnTestToken").onclick = async () => {
+  if (!token()) return toast(explainErr(), true);
+  try {
+    const r = await fetch(`https://api.github.com/repos/${CONFIG.GH_OWNER}/${CONFIG.GH_REPO}`, { cache: "no-cache", headers: { Authorization: `Bearer ${token()}`, Accept: "application/vnd.github+json" } });
+    if (!r.ok) return toast(explainErr({ status: r.status }), true);
+    const d = await r.json();
+    d.permissions && d.permissions.push === false ? toast("Connexion OK, mais jeton en LECTURE seule ⚠️", true) : toast("Connexion OK ✅ écriture autorisée");
+  } catch { toast("Pas de connexion internet ?", true); }
+};
 
 /* ---------- Appli installable (raccourci écran d'accueil) ---------- */
 (function setupInstall() {
