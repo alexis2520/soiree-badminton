@@ -67,10 +67,10 @@ let unlocked = false, inGallery = false;
 let sent = parseInt(localStorage.getItem("capsule_sent_" + (CONFIG.EVENT_ID || "")) || "0", 10);
 
 function applyAll() {
-  T = { ...(THEMES[CONFIG.THEME] || THEMES.fluo), ...(CONFIG.THEME_OVERRIDES || {}) }; FLUO = T.titleColors; NEON = T.neon;
+  T = { ...(THEMES[CONFIG.THEME] || THEMES.fluo), ...(CONFIG.THEME_OVERRIDES || {}), ...(CONFIG.THEME_FULL || {}) }; FLUO = T.titleColors; NEON = T.neon;
   const set = (k, v) => document.documentElement.style.setProperty(k, v);
   T.bg.forEach((c, i) => set(`--bg${i + 1}`, c));
-  set("--stripe", T.stripes ? "rgba(255,255,255,.08)" : "transparent");
+  set("--stripe", T.stripes ? `rgba(255,255,255,${T.stripeAlpha ?? .08})` : "transparent");
   set("--text", T.text); set("--accent", T.accent); set("--accent-text", T.accentText); set("--highlight", T.highlight);
   set("--outline", T.outline); set("--panel", T.panel); set("--frame-a", T.frame[0]); set("--frame-b", T.frame[1]); set("--frame-border", T.frameBorder);
   set("--title-font", `"${T.titleFont}"`); set("--title-weight", T.titleWeight); set("--body-font", `"${T.bodyFont}"`);
@@ -81,6 +81,14 @@ function applyAll() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", T.bg[1]);
   const fl = document.querySelector(".floaters"), fh = T.floaters.map(x => `<span>${esc(x)}</span>`).join("");
   if (fl.dataset.h !== fh) { fl.dataset.h = fh; fl.innerHTML = fh; }
+  document.body.classList.toggle("has-garland", !!T.garland);
+  const gl = $("garland"); gl.classList.toggle("hidden", !T.garland);
+  if (T.garland && !gl.firstChild) gl.innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="color:${["#ff4d4d", "#ffd34d", "#3ddc84", "#4dc3ff"][i % 4]};animation-delay:-${(i * .37).toFixed(2)}s"></i>`).join("");
+  const sn = $("snow"), want = T.snow ? "1" : "0";
+  if (sn.dataset.s !== want) {
+    sn.dataset.s = want;
+    sn.innerHTML = T.snow ? Array.from({ length: 30 }, () => `<span style="left:${rnd(0, 100).toFixed(1)}%;font-size:${rnd(10, 26).toFixed(0)}px;opacity:${rnd(.5, .95).toFixed(2)};animation-duration:${rnd(8, 17).toFixed(1)}s;animation-delay:-${rnd(0, 15).toFixed(1)}s">${pick(["❄", "❅", "•"])}</span>`).join("") : "";
+  }
   $("themeTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME); $("themeTitle").classList.toggle("pulse", T.pulse !== false);
   $("footTitle").innerHTML = fluoSpans(CONFIG.THEME_NAME); $("subtitle").textContent = CONFIG.SUBTITLE;
   ["logoHeader", "footLogo"].forEach(id => { $(id).style.display = T.showLogo === false ? "none" : ""; $(id).src = CONFIG.LOGO_URL; });
@@ -89,7 +97,7 @@ function applyAll() {
 const esc = (x) => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function mergeSettings(o) {
   ["THEME_NAME", "SUBTITLE", "CLUB_NAME", "THEME"].forEach(k => { if (o[k] !== undefined) CONFIG[k] = o[k]; });
-  CONFIG.THEME_OVERRIDES = o.THEME_OVERRIDES || {};
+  CONFIG.THEME_OVERRIDES = o.THEME_OVERRIDES || {}; CONFIG.THEME_FULL = o.THEME_FULL || null;
 }
 async function loadSettings() {
   try { const c = JSON.parse(localStorage.getItem(SKEY) || "null"); if (c) mergeSettings(c); } catch {}
@@ -292,6 +300,14 @@ async function processPhoto(src, landscape, mirror) {
   }
   ctx.restore();
 
+  // Petites décos aléatoires dans les coins (thèmes festifs)
+  if (T.photoDeco && T.photoDeco.length) {
+    [[M, M], [M + iw, M], [M, M + ih], [M + iw, M + ih]].sort(() => Math.random() - .5).slice(0, 2 + Math.floor(Math.random() * 2)).forEach(([cx, cy]) => {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(rnd(-.45, .45)); ctx.font = `${Math.round(W * rnd(.07, .1))}px serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(pick(T.photoDeco), 0, 0); ctx.restore();
+    });
+  }
+
   // Pied : logo + titre multicolore + club/date
   const fy = M + ih, cy = fy + footer / 2; let textX = W / 2;
   try {
@@ -412,12 +428,12 @@ async function setUnlocked(on) {
 /* ---------- Apparence (admin) ---------- */
 const FONTS = [["Titan One", "Titan+One", 400], ["Lilita One", "Lilita+One", 400], ["Bangers", "Bangers", 400], ["Bungee", "Bungee", 400],
   ["Righteous", "Righteous", 400], ["Pacifico", "Pacifico", 400], ["Permanent Marker", "Permanent+Marker", 400], ["Playfair Display", "Playfair+Display:wght@800", 800], ["Mountains of Christmas", "Mountains+of+Christmas:wght@700", 700]];
-const setOv = (o) => { draftDirty = true; CONFIG.THEME_OVERRIDES = { ...CONFIG.THEME_OVERRIDES, ...o }; applyAll(); };
+const setOv = (o) => { draftDirty = true; CONFIG.THEME_FULL = null; CONFIG.THEME_OVERRIDES = { ...T, ...o }; applyAll(); };
 const tc4 = () => Array.from({ length: 4 }, (_, i) => T.titleColors[i % T.titleColors.length]);
 function renderDesign() {
   if (!window._fontsPrev) { window._fontsPrev = 1; const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?" + FONTS.map(f => "family=" + f[1]).join("&") + "&display=swap"; document.head.appendChild(l); }
   const col = (id, label, v) => `<label class="color-item"><input type="color" data-c="${id}" value="${v}">${label}</label>`;
-  const chk = (k, label) => `<label class="toggle"><input type="checkbox" data-t="${k}" ${(k === "stripes" ? T.stripes : T[k] !== false) ? "checked" : ""}>${label}</label>`;
+  const chk = (k, label) => `<label class="toggle"><input type="checkbox" data-t="${k}" ${(["stripes", "snow", "garland"].includes(k) ? !!T[k] : T[k] !== false) ? "checked" : ""}>${label}</label>`;
   $("designForm").innerHTML = `
     <h3 class="sec">✏️ Textes</h3>
     <label class="f-row">Titre<input type="text" data-k="THEME_NAME" value="${esc(CONFIG.THEME_NAME)}"></label>
@@ -432,7 +448,8 @@ function renderDesign() {
     <div class="fonts">${FONTS.map(f => `<button class="font-btn ${f[0] === T.titleFont ? "on" : ""}" data-fontname="${f[0]}" style="font-family:'${f[0]}',sans-serif;font-weight:${f[2]}">${f[0]}</button>`).join("")}</div>
     <h3 class="sec">✨ Petits ajouts</h3>
     <label class="f-row">Emojis qui flottent en fond (séparés par des espaces)<input type="text" data-emoji value="${esc(T.floaters.join(" "))}"></label>
-    ${chk("stripes", "Rayures diagonales")}${chk("confetti", "Confettis à chaque photo")}${chk("pulse", "Titre qui pulse")}${chk("showLogo", "Afficher le logo (page et photos)")}`;
+    <label class="f-row">Petites décos posées au hasard sur les photos (emojis)<input type="text" data-deco value="${esc((T.photoDeco || []).join(" "))}"></label>
+    ${chk("stripes", "Rayures diagonales")}${chk("snow", "Neige qui tombe ❄️")}${chk("garland", "Guirlande lumineuse 💡")}${chk("confetti", "Confettis à chaque photo")}${chk("pulse", "Titre qui pulse")}${chk("showLogo", "Afficher le logo (page et photos)")}`;
 }
 $("designForm").addEventListener("input", e => {
   const t = e.target, d = t.dataset;
@@ -442,6 +459,7 @@ $("designForm").addEventListener("input", e => {
     else if (d.c !== "text" && d.c[0] === "t") { const a = tc4(); a[+d.c[1]] = t.value; setOv({ titleColors: a }); }
     else setOv({ [d.c]: t.value });
   } else if (d.emoji !== undefined) setOv({ floaters: t.value.split(/\s+/).filter(Boolean).slice(0, 6) });
+  else if (d.deco !== undefined) setOv({ photoDeco: t.value.split(/\s+/).filter(Boolean).slice(0, 8) });
   else if (d.t) setOv({ [d.t]: t.checked });
   else if (d.font !== undefined) { const f = FONTS.find(x => x[0] === t.value); setOv({ titleFont: f[0], titleWeight: f[2], fonts: [f[1], (THEMES[CONFIG.THEME] || THEMES.fluo).fonts.slice(-1)[0]] }); }
 });
@@ -449,10 +467,10 @@ $("designForm").addEventListener("click", e => {
   const fb = e.target.closest("[data-fontname]");
   if (fb) { const f = FONTS.find(x => x[0] === fb.dataset.fontname); setOv({ titleFont: f[0], titleWeight: f[2], fonts: [f[1], (THEMES[CONFIG.THEME] || THEMES.fluo).fonts.slice(-1)[0]] }); renderDesign(); return; }
   const b = e.target.closest("[data-preset]"); if (!b) return;
-  draftDirty = true; CONFIG.THEME = b.dataset.preset; CONFIG.THEME_OVERRIDES = {}; applyAll(); renderDesign();
+  draftDirty = true; CONFIG.THEME = b.dataset.preset; CONFIG.THEME_OVERRIDES = {}; CONFIG.THEME_FULL = null; applyAll(); renderDesign();
 });
 async function saveSettings() {
-  const o = { THEME_NAME: CONFIG.THEME_NAME, SUBTITLE: CONFIG.SUBTITLE, CLUB_NAME: CONFIG.CLUB_NAME, THEME: CONFIG.THEME, THEME_OVERRIDES: CONFIG.THEME_OVERRIDES || {} };
+  const o = { THEME_NAME: CONFIG.THEME_NAME, SUBTITLE: CONFIG.SUBTITLE, CLUB_NAME: CONFIG.CLUB_NAME, THEME: CONFIG.THEME, THEME_OVERRIDES: CONFIG.THEME_OVERRIDES || {}, THEME_FULL: T };
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(o, null, 1))));
   let st;
   for (let i = 0; i < 5; i++) {

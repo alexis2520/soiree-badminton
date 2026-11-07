@@ -67,12 +67,16 @@ const THEMES = {
   },
   noel: {
     label: "Noël",
-    bg: ["#0b3d2e", "#146b3a", "#8e1b1b"], stripes: true, text: "#ffffff",
+    bg: ["#0a3622", "#0f5a32", "#9b1c1c"], stripes: true, stripeAlpha: .13, text: "#ffffff",
     accent: "#ffd34d", accentText: "#3b0a0a", highlight: "#ffe9a8", outline: "#2a0505",
     panel: "rgba(8,36,22,.55)", frame: ["#1a0505", "#0f3d28"], frameBorder: "#ff4d4d",
-    neon: ["#ff4d4d", "#ffd34d", "#ffffff", "#3ddc84", "#ff9ecb"], titleColors: ["#ff4d4d", "#ffffff", "#3ddc84", "#ffd34d"],
+    neon: ["#ff4d4d", "#ffd34d", "#ffffff", "#3ddc84", "#ff9ecb"], titleColors: ["#ff3b3b", "#ffffff", "#3ddc84", "#ffd34d"],
     photoHue: [130, 170], photoSat: 55, filter: { sat: 1.2, con: 1.1, tint: [10, 2, -6] },
     titleFont: "Mountains of Christmas", titleWeight: 700, bodyFont: "Nunito",
-    fonts: ["Mountains+of+Christmas:wght@700", "Nunito:wght@400;600;700"], floaters: ["🎄", "❄️", "🎁", "⭐", "🏸", "❄️"]
+    fonts: ["Mountains+of+Christmas:wght@700", "Nunito:wght@400;600;700"],
+    floaters: ["🎄", "🎁", "🔔", "🦌", "🏸", "🎅"],
+    snow: true,                         // neige qui tombe
+    garland: true,                      // guirlande lumineuse en haut
+    photoDeco: ["❄️", "⭐", "🎄", "🎁"]  // petites décos posées au hasard sur les photos
   }
 };

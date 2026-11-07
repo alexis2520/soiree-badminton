@@ -152,11 +152,23 @@ select, option { color: #1b1030 !important; background: #fff !important; }
 .font-btn { padding: 10px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.6); background: rgba(255,255,255,.12); color: var(--text); font-size: 1.2rem; line-height: 1.2; text-align: center; }
 .font-btn.on { background: var(--accent); color: var(--accent-text); border-color: #fff; }
 
+/* ===== Effets festifs (neige, guirlande) ===== */
+.snow { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.snow span { position: absolute; top: -30px; color: #fff; animation: fall linear infinite; text-shadow: 0 0 6px rgba(255,255,255,.8); }
+@keyframes fall { to { transform: translate(40px, 112vh) rotate(360deg); } }
+.garland { position: fixed; top: 0; left: 0; right: 0; height: 36px; display: flex; justify-content: space-around; z-index: 35; pointer-events: none; }
+.garland::before { content: ""; position: absolute; top: 4px; left: 0; right: 0; height: 3px; background: #06190f; }
+.garland i { width: 12px; height: 18px; margin-top: 7px; border-radius: 50% 50% 55% 55%; background: currentColor; box-shadow: 0 0 10px 3px currentColor; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+body.has-garland .app-main { padding-top: 44px; }
+@media (prefers-reduced-motion: reduce) { .snow { display: none; } }
   </style>
 </head>
 <body class="text-white min-h-screen">
   <div class="floaters" aria-hidden="true"><span>🏸</span><span>✨</span><span>⚡</span><span>🏸</span><span>✨</span></div>
   <canvas id="confetti"></canvas>
+  <div id="snow" class="snow" aria-hidden="true"></div>
+  <div id="garland" class="garland hidden" aria-hidden="true"></div>
   <div id="screenFlash" class="hidden"></div>
   <div id="toast" class="toast" role="status"></div>
 
@@ -241,7 +253,7 @@ select, option { color: #1b1030 !important; background: #fff !important; }
           <button id="btnTestToken" class="btn-ghost" style="flex:1;min-width:160px">🔌 Tester la connexion</button>
         </div>
       </div>
-      <p class="text-xs opacity-50 text-center mt-4">Version du site : 14</p>
+      <p class="text-xs opacity-50 text-center mt-4">Version du site : 15</p>
     </section>
 
     <!-- Accès admin caché -->
@@ -260,7 +272,7 @@ select, option { color: #1b1030 !important; background: #fff !important; }
       <button id="lightboxClose" class="btn-ghost !w-auto px-6">Fermer</button>
     </div>
   </div>
-  <script src="config.js?v=14"></script>
-  <script src="script.js?v=14"></script>
+  <script src="config.js?v=15"></script>
+  <script src="script.js?v=15"></script>
 </body>
 </html>
